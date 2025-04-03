@@ -34,6 +34,7 @@ python backup_s3.py <folder_name> [options]
 
 - `--cleanup`: Remove local staging directory after successful upload
 - `--use-delete`: Use the `--delete` flag with `aws s3 sync` during download (removes local files not in source)
+- `--confirm`: Prompt for confirmation before each operation step
 - `--source-profile`: AWS profile for source bucket (default: uses default profile)
 - `--dest-profile`: AWS profile for destination bucket (default: "prod-3")
 - `--source-bucket`: Source S3 bucket name (default: "studies-db-prod")
@@ -62,6 +63,12 @@ Back up a folder named "Bermuda" with cleanup:
 
 ```bash
 python backup_s3.py Bermuda --cleanup
+```
+
+Back up a folder with confirmation at each step:
+
+```bash
+python backup_s3.py Bermuda --confirm
 ```
 
 Back up a folder using custom profiles and buckets:
