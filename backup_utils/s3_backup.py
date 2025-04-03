@@ -5,8 +5,8 @@ import shutil
 import configparser
 
 class S3Backup:
-    def __init__(self, source_profile="", dest_profile="prod-3", 
-                 source_bucket="studies-db-prod", dest_bucket="newatlantis-science",
+    def __init__(self, source_profile="", dest_profile="", 
+                 source_bucket="", dest_bucket="",
                  dest_bucket_base_path=None, base_local_path=None):
         # --- Configuration ---
         self.SOURCE_PROFILE = source_profile

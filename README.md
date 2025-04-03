@@ -59,16 +59,16 @@ python clear_staging.py [--folder FOLDER | --all] [options]
 
 ## Examples
 
-Back up a folder named "Bermuda" with cleanup:
+Back up a folder named "my-folder" with cleanup:
 
 ```bash
-python backup_s3.py Bermuda --cleanup
+python backup_s3.py my-folder --cleanup
 ```
 
 Back up a folder with confirmation at each step:
 
 ```bash
-python backup_s3.py Bermuda --confirm
+python backup_s3.py my-folder --confirm
 ```
 
 Back up a folder using custom profiles and buckets:
@@ -80,7 +80,7 @@ python backup_s3.py SampleData --source-profile dev --dest-profile prod --source
 Clear a specific folder's staging directory:
 
 ```bash
-python clear_staging.py --folder Bermuda
+python clear_staging.py --folder my-folder
 ```
 
 Clear all staging directories:

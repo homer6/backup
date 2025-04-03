@@ -7,16 +7,16 @@ from backup_utils.s3_backup import S3Backup
 def main():
     # --- Argument Parsing ---
     parser = argparse.ArgumentParser(description="Backup a specific S3 folder from one AWS account/bucket to another via local staging.")
-    parser.add_argument("folder_name", help="The specific 'folder' (prefix) within the source bucket to back up (e.g., Bermuda).")
+    parser.add_argument("folder_name", help="The specific 'folder' (prefix) within the source bucket to back up (e.g., my-folder).")
     parser.add_argument("--cleanup", action="store_true", help="Remove the local staging directory after successful upload.")
     parser.add_argument("--use-delete", action="store_true", help="Use the --delete flag with 'aws s3 sync' during download (removes local files not in source).")
     parser.add_argument("--confirm", action="store_true", help="Confirm each step before execution.")
     
     # Additional parameters to override defaults
     parser.add_argument("--source-profile", default="", help="AWS profile for source bucket.")
-    parser.add_argument("--dest-profile", default="prod-3", help="AWS profile for destination bucket.")
-    parser.add_argument("--source-bucket", default="studies-db-prod", help="Source S3 bucket name.")
-    parser.add_argument("--dest-bucket", default="newatlantis-science", help="Destination S3 bucket name.")
+    parser.add_argument("--dest-profile", default="", help="AWS profile for destination bucket.")
+    parser.add_argument("--source-bucket", default="", help="Source S3 bucket name.")
+    parser.add_argument("--dest-bucket", default="", help="Destination S3 bucket name.")
 
     args = parser.parse_args()
     
