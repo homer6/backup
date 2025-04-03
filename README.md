@@ -71,10 +71,10 @@ Back up a folder with confirmation at each step:
 python backup_s3.py my-folder --confirm
 ```
 
-Back up a folder using custom profiles and buckets:
+Back up a folder using custom profiles and buckets (confirm at each step):
 
 ```bash
-python backup_s3.py SampleData --source-profile dev --dest-profile prod --source-bucket source-data --dest-bucket dest-data
+python backup_s3.py SampleData --source-profile dev --dest-profile prod --source-bucket source-data --dest-bucket dest-data --confirm
 ```
 
 Clear a specific folder's staging directory:
