@@ -153,7 +153,7 @@ class S3Backup:
         if self.SOURCE_PROFILE:
             download_cmd.extend(["--profile", self.SOURCE_PROFILE])
         if use_delete:
-            download_cmd.append("--delete")  # Add delete flag if requested
+            download_cmd.append("--delete")  # Add delete flag if requested; this will remove local files (at the destination) that are not in source
 
         if not self.run_command(download_cmd, "S3 download"):
             print("Aborting due to download error.", file=sys.stderr)
