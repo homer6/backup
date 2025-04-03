@@ -21,6 +21,11 @@ class S3Backup:
         # Base directory on your local machine for temporary downloads.
         self.BASE_LOCAL_PATH = base_local_path or os.path.expanduser("~/s3_backup_staging")
 
+    def _confirm_step(self, step_description):
+        """Ask for user confirmation before proceeding with a step."""
+        response = input(f"\nReady to {step_description}. Proceed? (yes/no): ").strip().lower()
+        return response in ['yes', 'y']
+
     def run_command(self, command_list, step_description):
         """Executes a command using subprocess and handles errors."""
         print(f"         Executing: {' '.join(command_list)}")
@@ -92,7 +97,7 @@ class S3Backup:
                            self.SOURCE_BUCKET, 
                            folder_name)
 
-    def perform_backup(self, folder_to_backup, use_delete=False, cleanup=False):
+    def perform_backup(self, folder_to_backup, use_delete=False, cleanup=False, confirm=False):
         """Perform the S3 backup process for the specified folder."""
         # --- Construct Paths ---
         # Ensure trailing slash for S3 prefixes
@@ -121,10 +126,16 @@ class S3Backup:
         print(f"  Local Staging:       {local_download_dir}")
         print(f"  Use --delete flag:   {use_delete}")
         print(f"  Cleanup Local Dir:   {cleanup}")
+        print(f"  Confirm Each Step:   {confirm}")
         print("==================================================")
 
         # 1. Create local staging directory
         print("[Step 1/3] Creating local staging directory...")
+        
+        if confirm and not self._confirm_step("create local staging directory"):
+            print("Backup aborted by user.")
+            return False
+            
         try:
             os.makedirs(local_download_dir, exist_ok=True)
             print(f"         Directory ensured: {local_download_dir}")
@@ -134,6 +145,10 @@ class S3Backup:
 
         # 2. Download data from source S3
         print("[Step 2/3] Downloading data from source S3...")
+        if confirm and not self._confirm_step("download data from source S3"):
+            print("Backup aborted by user.")
+            return False
+            
         download_cmd = ["aws", "s3", "sync", source_s3_path, local_download_dir]
         if self.SOURCE_PROFILE:
             download_cmd.extend(["--profile", self.SOURCE_PROFILE])
@@ -146,6 +161,10 @@ class S3Backup:
 
         # 3. Upload data to destination S3
         print("[Step 3/3] Uploading data to destination S3...")
+        if confirm and not self._confirm_step("upload data to destination S3"):
+            print("Backup aborted by user.")
+            return False
+            
         upload_cmd = ["aws", "s3", "sync", local_download_dir, dest_s3_path]
         if self.DEST_PROFILE:
             upload_cmd.extend(["--profile", self.DEST_PROFILE])
@@ -157,12 +176,15 @@ class S3Backup:
         # 4. Optional Cleanup
         if cleanup:
             print("[Cleanup] Removing local staging directory...")
-            try:
-                shutil.rmtree(local_download_dir)
-                print(f"          Removed: {local_download_dir}")
-                print("          Cleanup complete.")
-            except OSError as e:
-                print(f"Warning: Could not remove local directory {local_download_dir}: {e}", file=sys.stderr)
+            if confirm and not self._confirm_step("remove local staging directory"):
+                print("Cleanup skipped by user.")
+            else:
+                try:
+                    shutil.rmtree(local_download_dir)
+                    print(f"          Removed: {local_download_dir}")
+                    print("          Cleanup complete.")
+                except OSError as e:
+                    print(f"Warning: Could not remove local directory {local_download_dir}: {e}", file=sys.stderr)
 
         print("==================================================")
         print(f"Backup process finished successfully for {folder_to_backup}.")

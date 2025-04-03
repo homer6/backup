@@ -10,6 +10,7 @@ def main():
     parser.add_argument("folder_name", help="The specific 'folder' (prefix) within the source bucket to back up (e.g., Bermuda).")
     parser.add_argument("--cleanup", action="store_true", help="Remove the local staging directory after successful upload.")
     parser.add_argument("--use-delete", action="store_true", help="Use the --delete flag with 'aws s3 sync' during download (removes local files not in source).")
+    parser.add_argument("--confirm", action="store_true", help="Confirm each step before execution.")
     
     # Additional parameters to override defaults
     parser.add_argument("--source-profile", default="", help="AWS profile for source bucket.")
@@ -31,7 +32,8 @@ def main():
     success = backup.perform_backup(
         folder_to_backup=args.folder_name,
         use_delete=args.use_delete,
-        cleanup=args.cleanup
+        cleanup=args.cleanup,
+        confirm=args.confirm
     )
     
     if not success:
