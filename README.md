@@ -39,6 +39,7 @@ python backup_s3.py <folder_name> [options]
 - `--dest-profile`: AWS profile for destination bucket (default: "prod-3")
 - `--source-bucket`: Source S3 bucket name (default: "studies-db-prod")
 - `--dest-bucket`: Destination S3 bucket name (default: "newatlantis-science")
+- `--dest-path`: Destination path within the bucket (default: same as source bucket name)
 
 ### Clearing Staging Directories
 
@@ -74,7 +75,7 @@ python backup_s3.py my-folder --confirm
 Back up a folder using custom profiles and buckets (confirm at each step):
 
 ```bash
-python backup_s3.py SampleData --source-profile dev --dest-profile prod --source-bucket source-data --dest-bucket dest-data --confirm
+python backup_s3.py SampleData --source-profile dev --dest-profile prod --source-bucket source-data --dest-bucket dest-data --dest-path backups/2025 --confirm
 ```
 
 Clear a specific folder's staging directory:
