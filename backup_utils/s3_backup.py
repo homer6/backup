@@ -85,6 +85,13 @@ class S3Backup:
             print(f"Please configure it using: aws configure --profile {profile_name}", file=sys.stderr)
             return False
 
+    def get_staging_dir(self, folder_name):
+        """Returns the local staging directory path for a given folder."""
+        return os.path.join(self.BASE_LOCAL_PATH, 
+                           self.SOURCE_PROFILE or "default", 
+                           self.SOURCE_BUCKET, 
+                           folder_name)
+
     def perform_backup(self, folder_to_backup, use_delete=False, cleanup=False):
         """Perform the S3 backup process for the specified folder."""
         # --- Construct Paths ---
@@ -92,10 +99,7 @@ class S3Backup:
         source_s3_path = f"s3://{self.SOURCE_BUCKET}/{folder_to_backup}/"
         dest_s3_path = f"s3://{self.DEST_BUCKET}/{self.DEST_BUCKET_BASE_PATH}/{folder_to_backup}/"
         # Local directory for staging
-        local_download_dir = os.path.join(self.BASE_LOCAL_PATH, 
-                                          self.SOURCE_PROFILE or "default", 
-                                          self.SOURCE_BUCKET, 
-                                          folder_to_backup)
+        local_download_dir = self.get_staging_dir(folder_to_backup)
 
         # --- Pre-run Checks ---
         print("--- Performing Pre-run Checks ---")
@@ -156,18 +160,6 @@ class S3Backup:
             try:
                 shutil.rmtree(local_download_dir)
                 print(f"          Removed: {local_download_dir}")
-                # Attempt to remove parent directories if they are empty
-                try:
-                    # Go up level by level trying to remove empty dirs
-                    parent_dir = os.path.dirname(local_download_dir)
-                    while parent_dir != self.BASE_LOCAL_PATH and parent_dir != os.path.dirname(self.BASE_LOCAL_PATH):
-                        # Stop if we reach the base path or its parent
-                        os.rmdir(parent_dir)
-                        print(f"          Removed empty parent: {parent_dir}")
-                        parent_dir = os.path.dirname(parent_dir)
-                except OSError:
-                    # Expected error if directory is not empty, ignore it.
-                    pass
                 print("          Cleanup complete.")
             except OSError as e:
                 print(f"Warning: Could not remove local directory {local_download_dir}: {e}", file=sys.stderr)

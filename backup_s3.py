@@ -2,7 +2,7 @@
 
 import argparse
 import sys
-from s3_backup import S3Backup
+from backup_utils.s3_backup import S3Backup
 
 def main():
     # --- Argument Parsing ---
