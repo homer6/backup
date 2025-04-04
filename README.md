@@ -1,11 +1,13 @@
 # S3 Backup Tool
 
-A Python utility for backing up data from one S3 bucket to another, using a local staging directory.
+A Python utility for backing up data from one S3 bucket to another, using a local staging directory with archiving and timestamping.
 
 ## Features
 
 - Back up specific folders (prefixes) from one S3 bucket to another
 - Transfer between different AWS accounts/profiles
+- Archives data into fixed-size volumes using DAR 
+- Uploads archived data to destination S3 bucket with timestamp
 - Local staging allows for verification of data before upload
 - Optional cleanup of staging directories
 - Configurable source and destination buckets
@@ -16,6 +18,9 @@ No special installation required - just clone the repository and ensure you have
 
 - Python 3.6+
 - AWS CLI v2
+- DAR (Disk ARchive) utility installed
+  - Ubuntu/Debian: `sudo apt install dar`
+  - macOS: `brew install dar`
 - Properly configured AWS credentials
 
 ## Usage
@@ -32,9 +37,10 @@ python backup_s3.py <folder_name> [options]
 
 #### Options
 
-- `--cleanup`: Remove local staging directory after successful upload
+- `--cleanup`: Remove local staging and archive directories after successful upload
 - `--use-delete`: Use the `--delete` flag with `aws s3 sync` during download (removes local files not in source)
 - `--confirm`: Prompt for confirmation before each operation step
+- `--volume-size`: Size limit for each archive volume (default: 1G)
 - `--source-profile`: AWS profile for source bucket (default: uses default profile)
 - `--dest-profile`: AWS profile for destination bucket (default: "prod-3")
 - `--source-bucket`: Source S3 bucket name (default: "studies-db-prod")
@@ -72,10 +78,10 @@ Back up a folder with confirmation at each step:
 python backup_s3.py my-folder --confirm
 ```
 
-Back up a folder using custom profiles and buckets (confirm at each step):
+Back up a folder using custom profiles, buckets, and volume size (confirm at each step):
 
 ```bash
-python backup_s3.py SampleData --source-profile dev --dest-profile prod --source-bucket source-data --dest-bucket dest-data --dest-path backups/2025 --confirm
+python backup_s3.py SampleData --source-profile dev --dest-profile prod --source-bucket source-data --dest-bucket dest-data --dest-path backups/2025 --volume-size 500M --confirm
 ```
 
 Clear a specific folder's staging directory:
@@ -95,3 +101,10 @@ python clear_staging.py --all
 - `backup_s3.py`: Main script for executing backups
 - `backup_utils/s3_backup.py`: Core S3Backup class with backup functionality
 - `clear_staging.py`: Script for managing staging directories
+
+## Backup Process
+
+1. Download files from source S3 bucket to local staging directory
+2. Archive the downloaded data into fixed-size volumes using DAR
+3. Upload the archives to destination S3 bucket with timestamp
+4. Optionally clean up local staging and archive directories

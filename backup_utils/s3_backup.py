@@ -3,6 +3,7 @@ import subprocess
 import sys
 import shutil
 import configparser
+import datetime
 
 class S3Backup:
     def __init__(self, source_profile="", dest_profile="", 
@@ -97,12 +98,16 @@ class S3Backup:
                            self.SOURCE_BUCKET, 
                            folder_name)
 
-    def perform_backup(self, folder_to_backup, use_delete=False, cleanup=False, confirm=False):
+    def perform_backup(self, folder_to_backup, use_delete=False, cleanup=False, confirm=False, volume_size="1G"):
         """Perform the S3 backup process for the specified folder."""
         # --- Construct Paths ---
+        # Create timestamp for this backup
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
         # Ensure trailing slash for S3 prefixes
         source_s3_path = f"s3://{self.SOURCE_BUCKET}/{folder_to_backup}/"
-        dest_s3_path = f"s3://{self.DEST_BUCKET}/{self.DEST_BUCKET_BASE_PATH}/{folder_to_backup}/"
+        dest_s3_path = f"s3://{self.DEST_BUCKET}/{self.DEST_BUCKET_BASE_PATH}/{folder_to_backup}/{timestamp}/"
+        
         # Local directory for staging
         local_download_dir = self.get_staging_dir(folder_to_backup)
 
@@ -159,13 +164,36 @@ class S3Backup:
             print("Aborting due to download error.", file=sys.stderr)
             return False
 
-        # 3. Upload data to destination S3
-        print("[Step 3/3] Uploading data to destination S3...")
-        if confirm and not self._confirm_step("upload data to destination S3"):
+        # 3. Create archives with dar
+        print("[Step 3/5] Creating archives with dar...")
+        if confirm and not self._confirm_step("create archives with dar"):
+            print("Backup aborted by user.")
+            return False
+        
+        # Create archive directory
+        archive_dir = os.path.join(self.BASE_LOCAL_PATH, f"{self.SOURCE_BUCKET}_{folder_to_backup}_{timestamp}")
+        try:
+            os.makedirs(archive_dir, exist_ok=True)
+            print(f"         Archive directory created: {archive_dir}")
+        except OSError as e:
+            print(f"Error creating archive directory {archive_dir}: {e}", file=sys.stderr)
+            return False
+        
+        # Create dar archive with volumes of specified size
+        archive_base_name = os.path.join(archive_dir, f"{folder_to_backup}_{timestamp}")
+        dar_cmd = ["dar", f"-s", volume_size, "-c", archive_base_name, "-R", local_download_dir]
+        
+        if not self.run_command(dar_cmd, "Creating archive"):
+            print("Aborting due to archiving error.", file=sys.stderr)
+            return False
+        
+        # 4. Upload archives to destination S3
+        print("[Step 4/5] Uploading archives to destination S3...")
+        if confirm and not self._confirm_step("upload archives to destination S3"):
             print("Backup aborted by user.")
             return False
             
-        upload_cmd = ["aws", "s3", "sync", local_download_dir, dest_s3_path]
+        upload_cmd = ["aws", "s3", "sync", archive_dir, dest_s3_path]
         if self.DEST_PROFILE:
             upload_cmd.extend(["--profile", self.DEST_PROFILE])
 
@@ -173,18 +201,32 @@ class S3Backup:
             print("Aborting due to upload error.", file=sys.stderr)
             return False
 
-        # 4. Optional Cleanup
+        # 5. Optional Cleanup
         if cleanup:
-            print("[Cleanup] Removing local staging directory...")
+            print("[Step 5/5] Cleaning up local directories...")
+            
+            # Clean up staging directory
+            print("Removing local staging directory...")
             if confirm and not self._confirm_step("remove local staging directory"):
-                print("Cleanup skipped by user.")
+                print("Staging directory cleanup skipped by user.")
             else:
                 try:
                     shutil.rmtree(local_download_dir)
                     print(f"          Removed: {local_download_dir}")
-                    print("          Cleanup complete.")
                 except OSError as e:
                     print(f"Warning: Could not remove local directory {local_download_dir}: {e}", file=sys.stderr)
+            
+            # Clean up archive directory
+            print("Removing local archive directory...")
+            if confirm and not self._confirm_step("remove local archive directory"):
+                print("Archive directory cleanup skipped by user.")
+            else:
+                try:
+                    shutil.rmtree(archive_dir)
+                    print(f"          Removed: {archive_dir}")
+                    print("          Cleanup complete.")
+                except OSError as e:
+                    print(f"Warning: Could not remove local directory {archive_dir}: {e}", file=sys.stderr)
 
         print("==================================================")
         print(f"Backup process finished successfully for {folder_to_backup}.")

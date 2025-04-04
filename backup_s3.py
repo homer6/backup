@@ -8,9 +8,10 @@ def main():
     # --- Argument Parsing ---
     parser = argparse.ArgumentParser(description="Backup a specific S3 folder from one AWS account/bucket to another via local staging.")
     parser.add_argument("folder_name", help="The specific 'folder' (prefix) within the source bucket to back up (e.g., my-folder).")
-    parser.add_argument("--cleanup", action="store_true", help="Remove the local staging directory after successful upload.")
+    parser.add_argument("--cleanup", action="store_true", help="Remove the local staging and archive directories after successful upload.")
     parser.add_argument("--use-delete", action="store_true", help="Use the --delete flag with 'aws s3 sync' during download (removes local files not in source).")
     parser.add_argument("--confirm", action="store_true", help="Confirm each step before execution.")
+    parser.add_argument("--volume-size", default="1G", help="Size limit for each archive volume (e.g., '1G', '500M'). Default is 1G.")
     
     # Additional parameters to override defaults
     parser.add_argument("--source-profile", default="", help="AWS profile for source bucket.")
@@ -35,7 +36,8 @@ def main():
         folder_to_backup=args.folder_name,
         use_delete=args.use_delete,
         cleanup=args.cleanup,
-        confirm=args.confirm
+        confirm=args.confirm,
+        volume_size=args.volume_size
     )
     
     if not success:
