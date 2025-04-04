@@ -19,6 +19,7 @@ def main():
     parser.add_argument("--source-bucket", default="", help="Source S3 bucket name.")
     parser.add_argument("--dest-bucket", default="", help="Destination S3 bucket name.")
     parser.add_argument("--dest-path", default="", help="Destination path within the bucket (default: same as source bucket name).")
+    parser.add_argument("--base-local-path", default="", help="Base directory on local machine for temporary downloads (default: ~/s3_backup_staging).")
     parser.add_argument("--storage-class", default="DEEP_ARCHIVE", 
                        choices=["STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", 
                                 "INTELLIGENT_TIERING", "GLACIER", "DEEP_ARCHIVE", "GLACIER_IR", "EXPRESS_ONEZONE"],
@@ -33,6 +34,7 @@ def main():
         source_bucket=args.source_bucket,
         dest_bucket=args.dest_bucket,
         dest_bucket_base_path=args.dest_path,
+        base_local_path=args.base_local_path or None,
         destination_storage_class=args.storage_class
     )
     

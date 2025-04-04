@@ -47,6 +47,7 @@ python backup_s3.py [folder_name] [options]
 - `--source-bucket`: Source S3 bucket name (default: "studies-db-prod")
 - `--dest-bucket`: Destination S3 bucket name (default: "newatlantis-science")
 - `--dest-path`: Destination path within the bucket (default: same as source bucket name)
+- `--base-local-path`: Base directory on local machine for temporary downloads (default: ~/s3_backup_staging)
 - `--storage-class`: Storage class for S3 objects (default: "DEEP_ARCHIVE", options: "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING", "GLACIER", "DEEP_ARCHIVE", "GLACIER_IR", "EXPRESS_ONEZONE")
 
 ### Clearing Staging Directories
@@ -89,7 +90,7 @@ python backup_s3.py my-folder --confirm
 Back up a folder using custom profiles, buckets, and volume size (confirm at each step):
 
 ```bash
-python backup_s3.py SampleData --source-profile dev --dest-profile prod --source-bucket source-data --dest-bucket dest-data --dest-path backups/2025 --volume-size 500M --confirm
+python backup_s3.py SampleData --source-profile dev --dest-profile prod --source-bucket source-data --dest-bucket dest-data --dest-path backups/2025 --base-local-path /tmp/s3_staging --volume-size 500M --confirm
 ```
 
 Back up an entire bucket using a specific storage class:
