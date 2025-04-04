@@ -193,7 +193,9 @@ class S3Backup:
         print("[Step 3/5] Creating volumes with dar...")
         
         # Create archive directory
-        folder_part = f"_{folder_to_backup}" if folder_to_backup else ""
+        # Replace slashes in folder name with underscores for directory naming
+        safe_folder_name = folder_to_backup.replace('/', '_') if folder_to_backup else ""
+        folder_part = f"_{safe_folder_name}" if safe_folder_name else ""
         archive_dir = os.path.join(self.BASE_LOCAL_PATH, f"{self.SOURCE_BUCKET}{folder_part}_{timestamp}")
         try:
             os.makedirs(archive_dir, exist_ok=True)
@@ -203,7 +205,8 @@ class S3Backup:
             return False
         
         # Create dar archive with volumes of specified size
-        archive_name = f"{folder_to_backup}_{timestamp}" if folder_to_backup else f"bucket_{timestamp}"
+        # Use safe folder name for archive name too
+        archive_name = f"{safe_folder_name}_{timestamp}" if folder_to_backup else f"bucket_{timestamp}"
         archive_base_name = os.path.join(archive_dir, archive_name)
         dar_cmd = ["dar", f"-s", volume_size, "-c", archive_base_name, "-R", local_download_dir]
         
