@@ -6,8 +6,8 @@ from backup_utils.s3_backup import S3Backup
 
 def main():
     # --- Argument Parsing ---
-    parser = argparse.ArgumentParser(description="Backup a specific S3 folder from one AWS account/bucket to another via local staging.")
-    parser.add_argument("folder_name", help="The specific 'folder' (prefix) within the source bucket to back up (e.g., my-folder).")
+    parser = argparse.ArgumentParser(description="Backup an S3 bucket or specific folder from one AWS account/bucket to another via local staging.")
+    parser.add_argument("folder_name", nargs='?', default="", help="Optional: The specific 'folder' (prefix) within the source bucket to back up (e.g., my-folder). If omitted, the entire bucket will be backed up.")
     parser.add_argument("--cleanup", action="store_true", help="Remove the local staging and archive directories after successful upload.")
     parser.add_argument("--use-delete", action="store_true", help="Use the --delete flag with 'aws s3 sync' during download (removes local files not in source).")
     parser.add_argument("--confirm", action="store_true", help="Confirm each step before execution.")

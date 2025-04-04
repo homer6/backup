@@ -4,7 +4,7 @@ A Python utility for backing up data from one S3 bucket to another, using a loca
 
 ## Features
 
-- Back up specific folders (prefixes) from one S3 bucket to another
+- Back up specific folders (prefixes) or entire buckets from one S3 bucket to another
 - Transfer between different AWS accounts/profiles
 - Archives data into fixed-size volumes using DAR 
 - Uploads archived data to destination S3 bucket with timestamp
@@ -29,12 +29,12 @@ No special installation required - just clone the repository and ensure you have
 ### Performing Backups
 
 ```
-python backup_s3.py <folder_name> [options]
+python backup_s3.py [folder_name] [options]
 ```
 
 #### Arguments
 
-- `folder_name`: The specific folder (prefix) within the source bucket to back up
+- `folder_name`: (Optional) The specific folder (prefix) within the source bucket to back up. If omitted, the entire bucket will be backed up.
 
 #### Options
 
@@ -74,6 +74,12 @@ Back up a folder named "my-folder" with cleanup:
 python backup_s3.py my-folder --cleanup
 ```
 
+Back up an entire bucket with confirmation at each step:
+
+```bash
+python backup_s3.py --source-bucket my-bucket --confirm
+```
+
 Back up a folder with confirmation at each step:
 
 ```bash
@@ -86,10 +92,10 @@ Back up a folder using custom profiles, buckets, and volume size (confirm at eac
 python backup_s3.py SampleData --source-profile dev --dest-profile prod --source-bucket source-data --dest-bucket dest-data --dest-path backups/2025 --volume-size 500M --confirm
 ```
 
-Back up a folder using a specific storage class:
+Back up an entire bucket using a specific storage class:
 
 ```bash
-python backup_s3.py my-folder --storage-class GLACIER
+python backup_s3.py --source-bucket my-bucket --dest-bucket archive-bucket --storage-class GLACIER --confirm
 ```
 
 Clear a specific folder's staging directory:

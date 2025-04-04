@@ -101,20 +101,35 @@ class S3Backup:
 
     def get_staging_dir(self, folder_name):
         """Returns the local staging directory path for a given folder."""
-        return os.path.join(self.BASE_LOCAL_PATH, 
+        base_path = os.path.join(self.BASE_LOCAL_PATH, 
                            self.SOURCE_PROFILE or "default", 
-                           self.SOURCE_BUCKET, 
-                           folder_name)
+                           self.SOURCE_BUCKET)
+        
+        # If folder_name is empty, we're backing up the entire bucket
+        if not folder_name:
+            return base_path
+        
+        return os.path.join(base_path, folder_name)
 
     def perform_backup(self, folder_to_backup, use_delete=False, cleanup=False, confirm=False, volume_size="1G"):
-        """Perform the S3 backup process for the specified folder."""
+        """Perform the S3 backup process for the specified folder or entire bucket."""
         # --- Construct Paths ---
         # Create timestamp for this backup
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         
+        # Determine if we're backing up entire bucket or a specific folder
+        backup_type = "entire bucket" if not folder_to_backup else f"folder: {folder_to_backup}"
+        
         # Ensure trailing slash for S3 prefixes
-        source_s3_path = f"s3://{self.SOURCE_BUCKET}/{folder_to_backup}/"
-        dest_s3_path = f"s3://{self.DEST_BUCKET}/{self.DEST_BUCKET_BASE_PATH}/{folder_to_backup}/{timestamp}/"
+        source_s3_path = f"s3://{self.SOURCE_BUCKET}/"
+        if folder_to_backup:
+            source_s3_path = f"s3://{self.SOURCE_BUCKET}/{folder_to_backup}/"
+            
+        # Construct destination path
+        if folder_to_backup:
+            dest_s3_path = f"s3://{self.DEST_BUCKET}/{self.DEST_BUCKET_BASE_PATH}/{folder_to_backup}/{timestamp}/"
+        else:
+            dest_s3_path = f"s3://{self.DEST_BUCKET}/{self.DEST_BUCKET_BASE_PATH}/{timestamp}/"
         
         # Local directory for staging
         local_download_dir = self.get_staging_dir(folder_to_backup)
@@ -131,7 +146,7 @@ class S3Backup:
 
         # --- Main Backup Process ---
         print("==================================================")
-        print(f"Starting S3 Backup for Folder: {folder_to_backup}")
+        print(f"Starting S3 Backup for {backup_type}")
         print(f"  Source Profile:      {self.SOURCE_PROFILE or 'Default'}")
         print(f"  Source Path:         {source_s3_path}")
         print(f"  Destination Profile: {self.DEST_PROFILE or 'Default'}")
@@ -178,7 +193,8 @@ class S3Backup:
         print("[Step 3/5] Creating volumes with dar...")
         
         # Create archive directory
-        archive_dir = os.path.join(self.BASE_LOCAL_PATH, f"{self.SOURCE_BUCKET}_{folder_to_backup}_{timestamp}")
+        folder_part = f"_{folder_to_backup}" if folder_to_backup else ""
+        archive_dir = os.path.join(self.BASE_LOCAL_PATH, f"{self.SOURCE_BUCKET}{folder_part}_{timestamp}")
         try:
             os.makedirs(archive_dir, exist_ok=True)
             print(f"         Archive directory created: {archive_dir}")
@@ -187,7 +203,8 @@ class S3Backup:
             return False
         
         # Create dar archive with volumes of specified size
-        archive_base_name = os.path.join(archive_dir, f"{folder_to_backup}_{timestamp}")
+        archive_name = f"{folder_to_backup}_{timestamp}" if folder_to_backup else f"bucket_{timestamp}"
+        archive_base_name = os.path.join(archive_dir, archive_name)
         dar_cmd = ["dar", f"-s", volume_size, "-c", archive_base_name, "-R", local_download_dir]
         
         if confirm and not self._confirm_step("create volumes with dar", " ".join(dar_cmd)):
@@ -241,6 +258,7 @@ class S3Backup:
                     print(f"Warning: Could not remove local directory {archive_dir}: {e}", file=sys.stderr)
 
         print("==================================================")
-        print(f"Backup process finished successfully for {folder_to_backup}.")
+        backup_target = f"folder: {folder_to_backup}" if folder_to_backup else "entire bucket"
+        print(f"Backup process finished successfully for {backup_target}.")
         print("==================================================")
         return True

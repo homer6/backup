@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands
-- Run script: `python backup_s3.py <folder_name>`
+- Run script: `python backup_s3.py [folder_name]`
 - Lint: `flake8 *.py`
 - Format: `black *.py`
 - Type check: `mypy *.py`
@@ -18,3 +18,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Comments**: Add TODO comments for future improvements
 - **Constants**: Define constants at top of file
 - **Subprocess**: Always use subprocess.run() with proper error handling
+
+## Important Reminders
+- Always consider updating the documentation (README.md and usage examples) when modifying functionality
