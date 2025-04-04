@@ -4,12 +4,15 @@ import sys
 import shutil
 import configparser
 import datetime
+import glob
+from backup_utils.checkpoint import CheckpointManager
 
 class S3Backup:
     def __init__(self, source_profile="", dest_profile="", 
                  source_bucket="", dest_bucket="",
                  dest_bucket_base_path=None, base_local_path=None,
-                 destination_storage_class="DEEP_ARCHIVE"):
+                 destination_storage_class="DEEP_ARCHIVE",
+                 checkpoint_file=None, resume=False):
         # --- Configuration ---
         self.SOURCE_PROFILE = source_profile
         self.DEST_PROFILE = dest_profile
@@ -25,6 +28,13 @@ class S3Backup:
         
         # S3 storage class for destination bucket
         self.DESTINATION_STORAGE_CLASS = destination_storage_class
+        
+        # Checkpointing
+        self.checkpoint_file = checkpoint_file
+        self.resume = resume
+        self.checkpoint_manager = None
+        if checkpoint_file:
+            self.checkpoint_manager = CheckpointManager(checkpoint_file)
 
     def _confirm_step(self, step_description, command=None):
         """Ask for user confirmation before proceeding with a step."""
@@ -114,8 +124,26 @@ class S3Backup:
     def perform_backup(self, folder_to_backup, use_delete=False, cleanup=False, confirm=False, volume_size="1G"):
         """Perform the S3 backup process for the specified folder or entire bucket."""
         # --- Construct Paths ---
-        # Create timestamp for this backup
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        # Use existing backup ID from checkpoint or create new one
+        if self.resume and self.checkpoint_manager and self.checkpoint_manager.get_backup_id():
+            timestamp = self.checkpoint_manager.get_backup_id()
+            print(f"Resuming backup with ID: {timestamp}")
+        else:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            if self.checkpoint_manager:
+                # Initialize checkpoint with configuration
+                config = {
+                    "source_profile": self.SOURCE_PROFILE,
+                    "dest_profile": self.DEST_PROFILE,
+                    "source_bucket": self.SOURCE_BUCKET,
+                    "dest_bucket": self.DEST_BUCKET,
+                    "folder_to_backup": folder_to_backup,
+                    "dest_bucket_base_path": self.DEST_BUCKET_BASE_PATH,
+                    "use_delete": use_delete,
+                    "cleanup": cleanup,
+                    "volume_size": volume_size
+                }
+                self.checkpoint_manager.initialize(config)
         
         # Determine if we're backing up entire bucket or a specific folder
         backup_type = "entire bucket" if not folder_to_backup else f"folder: {folder_to_backup}"
@@ -159,7 +187,7 @@ class S3Backup:
         print("==================================================")
 
         # 1. Create local staging directory
-        print("[Step 1/3] Creating local staging directory...")
+        print("[Step 1/5] Creating local staging directory...")
         
         if confirm and not self._confirm_step("create local staging directory", f"mkdir -p {local_download_dir}"):
             print("Backup aborted by user.")
@@ -173,65 +201,106 @@ class S3Backup:
             return False
 
         # 2. Download data from source S3
-        print("[Step 2/3] Downloading data from source S3...")
+        print("[Step 2/5] Downloading data from source S3...")
         
-        download_cmd = ["aws", "s3", "sync", source_s3_path, local_download_dir]
-        if self.SOURCE_PROFILE:
-            download_cmd.extend(["--profile", self.SOURCE_PROFILE])
-        if use_delete:
-            download_cmd.append("--delete")  # Add delete flag if requested; this will remove local files (at the destination) that are not in source
-            
-        if confirm and not self._confirm_step("download data from source S3", " ".join(download_cmd)):
-            print("Backup aborted by user.")
-            return False
+        # Skip download if already completed in a previous run
+        if self.resume and self.checkpoint_manager and self.checkpoint_manager.is_download_complete():
+            print("         Skipping download step (already completed in previous run)")
+        else:
+            download_cmd = ["aws", "s3", "sync", source_s3_path, local_download_dir]
+            if self.SOURCE_PROFILE:
+                download_cmd.extend(["--profile", self.SOURCE_PROFILE])
+            if use_delete:
+                download_cmd.append("--delete")  # Add delete flag if requested; this will remove local files (at the destination) that are not in source
+                
+            if confirm and not self._confirm_step("download data from source S3", " ".join(download_cmd)):
+                print("Backup aborted by user.")
+                return False
 
-        if not self.run_command(download_cmd, "S3 download"):
-            print("Aborting due to download error.", file=sys.stderr)
-            return False
+            if not self.run_command(download_cmd, "S3 download"):
+                print("Aborting due to download error.", file=sys.stderr)
+                return False
+                
+            # Mark download as complete
+            if self.checkpoint_manager:
+                # Get list of downloaded files for tracking
+                downloaded_files = []
+                for root, _, files in os.walk(local_download_dir):
+                    for file in files:
+                        rel_path = os.path.relpath(os.path.join(root, file), local_download_dir)
+                        downloaded_files.append(rel_path)
+                self.checkpoint_manager.mark_download_complete(downloaded_files)
 
         # 3. Create volumes with dar
         print("[Step 3/5] Creating volumes with dar...")
         
-        # Create archive directory
         # Replace slashes in folder name with underscores for directory naming
         safe_folder_name = folder_to_backup.replace('/', '_') if folder_to_backup else ""
         folder_part = f"_{safe_folder_name}" if safe_folder_name else ""
         archive_dir = os.path.join(self.BASE_LOCAL_PATH, f"{self.SOURCE_BUCKET}{folder_part}_{timestamp}")
-        try:
-            os.makedirs(archive_dir, exist_ok=True)
-            print(f"         Archive directory created: {archive_dir}")
-        except OSError as e:
-            print(f"Error creating archive directory {archive_dir}: {e}", file=sys.stderr)
-            return False
         
-        # Create dar archive with volumes of specified size
-        # Use safe folder name for archive name too
-        archive_name = f"{safe_folder_name}_{timestamp}" if folder_to_backup else f"bucket_{timestamp}"
-        archive_base_name = os.path.join(archive_dir, archive_name)
-        dar_cmd = ["dar", f"-s", volume_size, "-c", archive_base_name, "-R", local_download_dir]
-        
-        if confirm and not self._confirm_step("create volumes with dar", " ".join(dar_cmd)):
-            print("Backup aborted by user.")
-            return False
-        
-        if not self.run_command(dar_cmd, "Creating archive"):
-            print("Aborting due to archiving error.", file=sys.stderr)
-            return False
+        # Skip archive creation if already completed in a previous run
+        if self.resume and self.checkpoint_manager and self.checkpoint_manager.is_archive_complete():
+            print("         Skipping archive creation step (already completed in previous run)")
+        else:
+            try:
+                os.makedirs(archive_dir, exist_ok=True)
+                print(f"         Archive directory created: {archive_dir}")
+            except OSError as e:
+                print(f"Error creating archive directory {archive_dir}: {e}", file=sys.stderr)
+                return False
+            
+            # Create dar archive with volumes of specified size
+            # Use safe folder name for archive name too
+            archive_name = f"{safe_folder_name}_{timestamp}" if folder_to_backup else f"bucket_{timestamp}"
+            archive_base_name = os.path.join(archive_dir, archive_name)
+            dar_cmd = ["dar", f"-s", volume_size, "-c", archive_base_name, "-R", local_download_dir]
+            
+            if confirm and not self._confirm_step("create volumes with dar", " ".join(dar_cmd)):
+                print("Backup aborted by user.")
+                return False
+            
+            if not self.run_command(dar_cmd, "Creating archive"):
+                print("Aborting due to archiving error.", file=sys.stderr)
+                return False
+                
+            # Mark archive creation as complete
+            if self.checkpoint_manager:
+                # Get list of archive volumes for tracking
+                archive_volumes = []
+                archive_pattern = os.path.join(archive_dir, f"{archive_name}.*.dar")
+                for file_path in glob.glob(archive_pattern):
+                    archive_volumes.append(os.path.basename(file_path))
+                self.checkpoint_manager.mark_archive_complete(archive_volumes)
         
         # 4. Upload archives to destination S3
         print("[Step 4/5] Uploading archives to destination S3...")
-            
-        upload_cmd = ["aws", "s3", "sync", archive_dir, dest_s3_path, "--storage-class", self.DESTINATION_STORAGE_CLASS]
-        if self.DEST_PROFILE:
-            upload_cmd.extend(["--profile", self.DEST_PROFILE])
-            
-        if confirm and not self._confirm_step("upload archives to destination S3", " ".join(upload_cmd)):
-            print("Backup aborted by user.")
-            return False
+        
+        # Skip upload if already completed in a previous run
+        if self.resume and self.checkpoint_manager and self.checkpoint_manager.is_upload_complete():
+            print("         Skipping upload step (already completed in previous run)")
+        else:
+            upload_cmd = ["aws", "s3", "sync", archive_dir, dest_s3_path, "--storage-class", self.DESTINATION_STORAGE_CLASS]
+            if self.DEST_PROFILE:
+                upload_cmd.extend(["--profile", self.DEST_PROFILE])
+                
+            if confirm and not self._confirm_step("upload archives to destination S3", " ".join(upload_cmd)):
+                print("Backup aborted by user.")
+                return False
 
-        if not self.run_command(upload_cmd, "S3 upload"):
-            print("Aborting due to upload error.", file=sys.stderr)
-            return False
+            if not self.run_command(upload_cmd, "S3 upload"):
+                print("Aborting due to upload error.", file=sys.stderr)
+                return False
+                
+            # Mark upload as complete
+            if self.checkpoint_manager:
+                # Get list of uploaded files for tracking
+                # We could run aws s3 ls command to list objects, but we'll use the local files as a proxy
+                uploaded_files = []
+                for file in os.listdir(archive_dir):
+                    if file.endswith(".dar"):
+                        uploaded_files.append(file)
+                self.checkpoint_manager.mark_upload_complete(uploaded_files)
 
         # 5. Optional Cleanup
         if cleanup:
