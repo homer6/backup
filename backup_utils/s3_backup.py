@@ -22,9 +22,13 @@ class S3Backup:
         # Base directory on your local machine for temporary downloads.
         self.BASE_LOCAL_PATH = base_local_path or os.path.expanduser("~/s3_backup_staging")
 
-    def _confirm_step(self, step_description):
+    def _confirm_step(self, step_description, command=None):
         """Ask for user confirmation before proceeding with a step."""
-        response = input(f"\nReady to {step_description}. Proceed? (yes/no): ").strip().lower()
+        message = f"\nReady to {step_description}."
+        if command:
+            message += f"\nCommand: {command}"
+        message += "\nProceed? (yes/no): "
+        response = input(message).strip().lower()
         return response in ['yes', 'y']
 
     def run_command(self, command_list, step_description):
@@ -137,7 +141,7 @@ class S3Backup:
         # 1. Create local staging directory
         print("[Step 1/3] Creating local staging directory...")
         
-        if confirm and not self._confirm_step("create local staging directory"):
+        if confirm and not self._confirm_step("create local staging directory", f"mkdir -p {local_download_dir}"):
             print("Backup aborted by user.")
             return False
             
@@ -150,25 +154,23 @@ class S3Backup:
 
         # 2. Download data from source S3
         print("[Step 2/3] Downloading data from source S3...")
-        if confirm and not self._confirm_step("download data from source S3"):
-            print("Backup aborted by user.")
-            return False
-            
+        
         download_cmd = ["aws", "s3", "sync", source_s3_path, local_download_dir]
         if self.SOURCE_PROFILE:
             download_cmd.extend(["--profile", self.SOURCE_PROFILE])
         if use_delete:
             download_cmd.append("--delete")  # Add delete flag if requested; this will remove local files (at the destination) that are not in source
+            
+        if confirm and not self._confirm_step("download data from source S3", " ".join(download_cmd)):
+            print("Backup aborted by user.")
+            return False
 
         if not self.run_command(download_cmd, "S3 download"):
             print("Aborting due to download error.", file=sys.stderr)
             return False
 
-        # 3. Create archives with dar
-        print("[Step 3/5] Creating archives with dar...")
-        if confirm and not self._confirm_step("create archives with dar"):
-            print("Backup aborted by user.")
-            return False
+        # 3. Create volumes with dar
+        print("[Step 3/5] Creating volumes with dar...")
         
         # Create archive directory
         archive_dir = os.path.join(self.BASE_LOCAL_PATH, f"{self.SOURCE_BUCKET}_{folder_to_backup}_{timestamp}")
@@ -183,19 +185,24 @@ class S3Backup:
         archive_base_name = os.path.join(archive_dir, f"{folder_to_backup}_{timestamp}")
         dar_cmd = ["dar", f"-s", volume_size, "-c", archive_base_name, "-R", local_download_dir]
         
+        if confirm and not self._confirm_step("create volumes with dar", " ".join(dar_cmd)):
+            print("Backup aborted by user.")
+            return False
+        
         if not self.run_command(dar_cmd, "Creating archive"):
             print("Aborting due to archiving error.", file=sys.stderr)
             return False
         
         # 4. Upload archives to destination S3
         print("[Step 4/5] Uploading archives to destination S3...")
-        if confirm and not self._confirm_step("upload archives to destination S3"):
-            print("Backup aborted by user.")
-            return False
             
         upload_cmd = ["aws", "s3", "sync", archive_dir, dest_s3_path]
         if self.DEST_PROFILE:
             upload_cmd.extend(["--profile", self.DEST_PROFILE])
+            
+        if confirm and not self._confirm_step("upload archives to destination S3", " ".join(upload_cmd)):
+            print("Backup aborted by user.")
+            return False
 
         if not self.run_command(upload_cmd, "S3 upload"):
             print("Aborting due to upload error.", file=sys.stderr)
@@ -207,7 +214,7 @@ class S3Backup:
             
             # Clean up staging directory
             print("Removing local staging directory...")
-            if confirm and not self._confirm_step("remove local staging directory"):
+            if confirm and not self._confirm_step("remove local staging directory", f"rm -rf {local_download_dir}"):
                 print("Staging directory cleanup skipped by user.")
             else:
                 try:
@@ -218,7 +225,7 @@ class S3Backup:
             
             # Clean up archive directory
             print("Removing local archive directory...")
-            if confirm and not self._confirm_step("remove local archive directory"):
+            if confirm and not self._confirm_step("remove local archive directory", f"rm -rf {archive_dir}"):
                 print("Archive directory cleanup skipped by user.")
             else:
                 try:
