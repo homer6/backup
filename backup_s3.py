@@ -14,8 +14,8 @@ def main():
     parser.add_argument("--volume-size", default="1G", help="Size limit for each archive volume (e.g., '1G', '500M'). Default is 1G.")
     
     # Checkpoint arguments
-    parser.add_argument("--checkpoint-file", default="", help="Path to checkpoint file to save progress (enables resumable backups).")
-    parser.add_argument("--resume", action="store_true", help="Resume a previously interrupted backup using the checkpoint file.")
+    parser.add_argument("--checkpoint-file", default="", help="Path to checkpoint file to save progress. By default, a file based on inputs will be used.")
+    parser.add_argument("--no-resume", action="store_true", help="Don't resume from previous checkpoint, even if one exists.")
     
     # Additional parameters to override defaults
     parser.add_argument("--source-profile", default="", help="AWS profile for source bucket.")
@@ -41,7 +41,7 @@ def main():
         base_local_path=args.base_local_path or None,
         destination_storage_class=args.storage_class,
         checkpoint_file=args.checkpoint_file,
-        resume=args.resume
+        resume=not args.no_resume
     )
     
     # Perform the backup

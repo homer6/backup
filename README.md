@@ -49,8 +49,8 @@ python backup_s3.py [folder_name] [options]
 - `--dest-path`: Destination path within the bucket (default: same as source bucket name)
 - `--base-local-path`: Base directory on local machine for temporary downloads (default: ~/s3_backup_staging)
 - `--storage-class`: Storage class for S3 objects (default: "DEEP_ARCHIVE", options: "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING", "GLACIER", "DEEP_ARCHIVE", "GLACIER_IR", "EXPRESS_ONEZONE")
-- `--checkpoint-file`: Path to checkpoint file to save progress (enables resumable backups)
-- `--resume`: Resume a previously interrupted backup using the checkpoint file
+- `--checkpoint-file`: Path to checkpoint file to save progress (by default, a file based on inputs will be used)
+- `--no-resume`: Don't resume from previous checkpoint, even if one exists
 
 ### Clearing Staging Directories
 
@@ -100,8 +100,14 @@ Back up an entire bucket using a specific storage class:
 ```bash
 python backup_s3.py --source-bucket my-bucket --dest-bucket archive-bucket --storage-class GLACIER --confirm
 
-# Resume a previously interrupted backup
-python backup_s3.py my-folder --checkpoint-file ~/backups/checkpoint.json --resume
+# Backups now automatically resume if interrupted
+python backup_s3.py my-folder
+
+# To force starting a fresh backup without resuming
+python backup_s3.py my-folder --no-resume
+
+# Specify a custom checkpoint file if needed
+python backup_s3.py my-folder --checkpoint-file ~/backups/checkpoint.json
 ```
 
 Clear a specific folder's staging directory:
@@ -132,17 +138,22 @@ python clear_staging.py --all
 
 ## Resumable Backups
 
-The script supports checkpoint-based resumable backups. This allows you to resume an interrupted backup process without having to restart from the beginning.
+The script now automatically uses resumable backups with smart checkpoint file naming. This allows you to resume an interrupted backup process without having to restart from the beginning.
 
-When using the `--checkpoint-file` option, the script saves the current state after each major step:
-- After download from S3 is complete
-- After archive creation is complete
-- After upload to destination S3 is complete
+Key features of the automatic checkpointing system:
 
-If the backup process is interrupted (e.g., due to network issues, system crash, etc.), you can resume from the last successful step by using the `--resume` flag along with the same checkpoint file.
+- Checkpoint files are automatically created based on bucket and folder names
+- Files are stored in `~/s3_backup_staging/.checkpoints/` by default
+- The script automatically saves progress after each major step:
+  - After download from S3 is complete
+  - After archive creation is complete
+  - After upload to destination S3 is complete
+- If a backup is interrupted, simply running the same command again will resume from where it left off
+- Use `--no-resume` to start a fresh backup and ignore existing checkpoint
+- You can still specify a custom checkpoint file with `--checkpoint-file` if needed
 
 Example workflow:
-1. Start a backup with checkpointing: `python backup_s3.py my-folder --checkpoint-file ~/backups/my-folder-checkpoint.json`
-2. If the process is interrupted, resume with: `python backup_s3.py my-folder --checkpoint-file ~/backups/my-folder-checkpoint.json --resume`
+1. Start a backup: `python backup_s3.py my-folder`
+2. If the process is interrupted, run the same command again: `python backup_s3.py my-folder`
 
-The script will automatically skip completed steps and continue from where it left off.
+The script will automatically detect the previous progress and resume from the last completed step.

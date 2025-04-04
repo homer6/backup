@@ -12,7 +12,7 @@ class S3Backup:
                  source_bucket="", dest_bucket="",
                  dest_bucket_base_path=None, base_local_path=None,
                  destination_storage_class="DEEP_ARCHIVE",
-                 checkpoint_file=None, resume=False):
+                 checkpoint_file=None, resume=True):
         # --- Configuration ---
         self.SOURCE_PROFILE = source_profile
         self.DEST_PROFILE = dest_profile
@@ -30,11 +30,10 @@ class S3Backup:
         self.DESTINATION_STORAGE_CLASS = destination_storage_class
         
         # Checkpointing
-        self.checkpoint_file = checkpoint_file
         self.resume = resume
         self.checkpoint_manager = None
-        if checkpoint_file:
-            self.checkpoint_manager = CheckpointManager(checkpoint_file)
+        self.checkpoint_file = checkpoint_file
+        # We'll initialize the checkpoint manager when we know the folder to backup
 
     def _confirm_step(self, step_description, command=None):
         """Ask for user confirmation before proceeding with a step."""
@@ -124,26 +123,42 @@ class S3Backup:
     def perform_backup(self, folder_to_backup, use_delete=False, cleanup=False, confirm=False, volume_size="1G"):
         """Perform the S3 backup process for the specified folder or entire bucket."""
         # --- Construct Paths ---
+        # Initialize checkpoint file if not provided
+        # Replace slashes in folder name with underscores for directory/file naming
+        safe_folder_name = folder_to_backup.replace('/', '_') if folder_to_backup else "bucket"
+        
+        if not self.checkpoint_file:
+            # Generate checkpoint file in BASE_LOCAL_PATH
+            checkpoint_dir = os.path.join(self.BASE_LOCAL_PATH, ".checkpoints")
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            self.checkpoint_file = os.path.join(
+                checkpoint_dir, 
+                f"{self.SOURCE_BUCKET}_{safe_folder_name}.json"
+            )
+            print(f"Using auto-generated checkpoint file: {self.checkpoint_file}")
+        
+        # Initialize checkpoint manager now that we have the filename
+        self.checkpoint_manager = CheckpointManager(self.checkpoint_file)
+        
         # Use existing backup ID from checkpoint or create new one
         if self.resume and self.checkpoint_manager and self.checkpoint_manager.get_backup_id():
             timestamp = self.checkpoint_manager.get_backup_id()
             print(f"Resuming backup with ID: {timestamp}")
         else:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            if self.checkpoint_manager:
-                # Initialize checkpoint with configuration
-                config = {
-                    "source_profile": self.SOURCE_PROFILE,
-                    "dest_profile": self.DEST_PROFILE,
-                    "source_bucket": self.SOURCE_BUCKET,
-                    "dest_bucket": self.DEST_BUCKET,
-                    "folder_to_backup": folder_to_backup,
-                    "dest_bucket_base_path": self.DEST_BUCKET_BASE_PATH,
-                    "use_delete": use_delete,
-                    "cleanup": cleanup,
-                    "volume_size": volume_size
-                }
-                self.checkpoint_manager.initialize(config)
+            # Initialize checkpoint with configuration
+            config = {
+                "source_profile": self.SOURCE_PROFILE,
+                "dest_profile": self.DEST_PROFILE,
+                "source_bucket": self.SOURCE_BUCKET,
+                "dest_bucket": self.DEST_BUCKET,
+                "folder_to_backup": folder_to_backup,
+                "dest_bucket_base_path": self.DEST_BUCKET_BASE_PATH,
+                "use_delete": use_delete,
+                "cleanup": cleanup,
+                "volume_size": volume_size
+            }
+            self.checkpoint_manager.initialize(config)
         
         # Determine if we're backing up entire bucket or a specific folder
         backup_type = "entire bucket" if not folder_to_backup else f"folder: {folder_to_backup}"
