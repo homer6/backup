@@ -8,7 +8,8 @@ import datetime
 class S3Backup:
     def __init__(self, source_profile="", dest_profile="", 
                  source_bucket="", dest_bucket="",
-                 dest_bucket_base_path=None, base_local_path=None):
+                 dest_bucket_base_path=None, base_local_path=None,
+                 destination_storage_class="DEEP_ARCHIVE"):
         # --- Configuration ---
         self.SOURCE_PROFILE = source_profile
         self.DEST_PROFILE = dest_profile
@@ -21,6 +22,9 @@ class S3Backup:
         
         # Base directory on your local machine for temporary downloads.
         self.BASE_LOCAL_PATH = base_local_path or os.path.expanduser("~/s3_backup_staging")
+        
+        # S3 storage class for destination bucket
+        self.DESTINATION_STORAGE_CLASS = destination_storage_class
 
     def _confirm_step(self, step_description, command=None):
         """Ask for user confirmation before proceeding with a step."""
@@ -132,6 +136,7 @@ class S3Backup:
         print(f"  Source Path:         {source_s3_path}")
         print(f"  Destination Profile: {self.DEST_PROFILE or 'Default'}")
         print(f"  Destination Path:    {dest_s3_path}")
+        print(f"  Destination Storage Class: {self.DESTINATION_STORAGE_CLASS}")
         print(f"  Local Staging:       {local_download_dir}")
         print(f"  Use --delete flag:   {use_delete}")
         print(f"  Cleanup Local Dir:   {cleanup}")
@@ -196,7 +201,7 @@ class S3Backup:
         # 4. Upload archives to destination S3
         print("[Step 4/5] Uploading archives to destination S3...")
             
-        upload_cmd = ["aws", "s3", "sync", archive_dir, dest_s3_path]
+        upload_cmd = ["aws", "s3", "sync", archive_dir, dest_s3_path, "--storage-class", self.DESTINATION_STORAGE_CLASS]
         if self.DEST_PROFILE:
             upload_cmd.extend(["--profile", self.DEST_PROFILE])
             

@@ -8,6 +8,7 @@ A Python utility for backing up data from one S3 bucket to another, using a loca
 - Transfer between different AWS accounts/profiles
 - Archives data into fixed-size volumes using DAR 
 - Uploads archived data to destination S3 bucket with timestamp
+- Configurable S3 storage class (STANDARD, GLACIER, DEEP_ARCHIVE, etc.)
 - Local staging allows for verification of data before upload
 - Optional cleanup of staging directories
 - Configurable source and destination buckets
@@ -46,6 +47,7 @@ python backup_s3.py <folder_name> [options]
 - `--source-bucket`: Source S3 bucket name (default: "studies-db-prod")
 - `--dest-bucket`: Destination S3 bucket name (default: "newatlantis-science")
 - `--dest-path`: Destination path within the bucket (default: same as source bucket name)
+- `--storage-class`: Storage class for S3 objects (default: "DEEP_ARCHIVE", options: "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING", "GLACIER", "DEEP_ARCHIVE", "GLACIER_IR", "EXPRESS_ONEZONE")
 
 ### Clearing Staging Directories
 
@@ -84,6 +86,12 @@ Back up a folder using custom profiles, buckets, and volume size (confirm at eac
 python backup_s3.py SampleData --source-profile dev --dest-profile prod --source-bucket source-data --dest-bucket dest-data --dest-path backups/2025 --volume-size 500M --confirm
 ```
 
+Back up a folder using a specific storage class:
+
+```bash
+python backup_s3.py my-folder --storage-class GLACIER
+```
+
 Clear a specific folder's staging directory:
 
 ```bash
@@ -106,5 +114,5 @@ python clear_staging.py --all
 
 1. Download files from source S3 bucket to local staging directory
 2. Archive the downloaded data into fixed-size volumes using DAR
-3. Upload the archives to destination S3 bucket with timestamp
+3. Upload the archives to destination S3 bucket with timestamp and specified storage class
 4. Optionally clean up local staging and archive directories
