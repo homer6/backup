@@ -269,7 +269,9 @@ class S3Backup:
             # Use safe folder name for archive name too
             archive_name = f"{safe_folder_name}_{timestamp}" if folder_to_backup else f"bucket_{timestamp}"
             archive_base_name = os.path.join(archive_dir, archive_name)
-            dar_cmd = ["dar", f"-s", volume_size, "-c", archive_base_name, "-R", local_download_dir]
+
+            # Suppress warnings from dar
+            dar_cmd = ["dar", f"-w", f"-s", volume_size, "-c", archive_base_name, "-R", local_download_dir]
             
             if confirm and not self._confirm_step("create volumes with dar", " ".join(dar_cmd)):
                 print("Backup aborted by user.")
