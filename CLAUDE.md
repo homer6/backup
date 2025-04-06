@@ -3,7 +3,8 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands
-- Run script: `python backup_s3.py [folder_name]`
+- Run S3 backup: `python backup_s3.py [folder_name]`
+- Run GitHub backup: `python backup_github.py <org_name>`
 - Lint: `flake8 *.py`
 - Format: `black *.py`
 - Type check: `mypy *.py`
