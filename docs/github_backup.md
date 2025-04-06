@@ -1,6 +1,6 @@
 # GitHub Backup Tool
 
-A Python utility for backing up all repositories from a GitHub organization, with options to include wikis and LFS objects, create archives, and upload to S3.
+A Python utility for backing up all repositories from a GitHub organization. By default, it creates DAR archives and uploads them to S3 with automatic bucket naming.
 
 ## Usage
 
@@ -21,11 +21,11 @@ python backup_github.py <org_name> [options]
 - `--include-forks`: Include forked repositories in the backup (optional, default: false)
 - `--include-wikis`: Download wiki pages for each repository (optional, default: false)
 - `--include-lfs`: Include Git LFS objects in the clones (optional, default: false)
-- `--create-archives`: Create archives of each repository (optional, default: false)
-- `--upload-to-s3`: Upload archives to S3 bucket (optional, default: false)
-- `--s3-bucket`: Destination S3 bucket name (required when --upload-to-s3 is used)
-- `--s3-profile`: AWS profile for S3 upload (optional, default: uses default profile)
-- `--s3-path`: Destination path within the bucket (optional, default: github_backups/<org_name>)
+- `--no-archives`: Skip creating DAR archives of each repository (optional, default: false)
+- `--no-s3-upload`: Skip uploading archives to S3 bucket (optional, default: false)
+- `--dest-bucket`: Destination S3 bucket name (optional, default: <org-name>-github-backups)
+- `--dest-profile`: AWS profile for S3 upload (optional, default: uses default profile)
+- `--dest-s3-path`: Destination path within the bucket (optional, default: github_backups/<org_name>)
 - `--storage-class`: Storage class for S3 objects (optional, default: "DEEP_ARCHIVE")
 - `--cleanup`: Remove local repositories after successful backup (optional, default: false)
 - `--confirm`: Confirm each step before execution (optional, default: false)
@@ -41,7 +41,7 @@ First, set your GitHub token as an environment variable:
 export GITHUB_TOKEN=your_github_personal_access_token
 ```
 
-Back up all repositories in an organization:
+Back up all repositories in an organization (with DAR archiving and S3 upload by default):
 
 ```bash
 python backup_github.py my-org-name
@@ -53,10 +53,16 @@ Back up all repositories including wikis and LFS objects:
 python backup_github.py my-org-name --include-wikis --include-lfs
 ```
 
-Back up all repositories, create archives, and upload to S3:
+Back up all repositories without creating archives or uploading to S3:
 
 ```bash
-python backup_github.py my-org-name --create-archives --upload-to-s3 --s3-bucket my-backup-bucket
+python backup_github.py my-org-name --no-archives --no-s3-upload
+```
+
+Back up all repositories with a custom S3 bucket name:
+
+```bash
+python backup_github.py my-org-name --dest-bucket custom-bucket-name
 ```
 
 Back up all repositories with confirmation at each step:
@@ -75,6 +81,6 @@ python backup_github.py my-org-name
 
 1. Fetch the list of repositories for the specified organization
 2. Clone each repository (with optional wiki and LFS objects)
-3. Optionally create archives of each repository using DAR
-4. Optionally upload the archives to S3 with timestamp
+3. Create DAR archives of each repository (disabled with --no-archives)
+4. Upload the archives to S3 with timestamp (disabled with --no-s3-upload)
 5. Optionally clean up local repositories and archive directories

@@ -29,6 +29,8 @@ export GITHUB_TOKEN=your_github_personal_access_token
 python backup_github.py <org_name> --confirm
 ```
 
+By default, this creates DAR archives and uploads them to S3 with bucket name `<org-name>-github-backups`.
+
 ### Clear Staging Directories
 
 ```bash
