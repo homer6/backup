@@ -12,25 +12,26 @@ python backup_github.py <org_name> [options]
 
 ### Arguments
 
-- `org_name`: GitHub organization name to backup.
+- `org_name`: GitHub organization name to backup (required)
+- `GITHUB_TOKEN`: Environment variable containing GitHub authentication token (required)
 
 ### Options
 
-- `--local-path`: Base directory on local machine for repository backups (default: ~/github_backup_staging)
-- `--include-forks`: Include forked repositories in the backup
-- `--include-wikis`: Download wiki pages for each repository
-- `--include-lfs`: Include Git LFS objects in the clones
-- `--cleanup`: Remove local repositories after successful backup
-- `--confirm`: Confirm each step before execution
-- `--create-archives`: Create archives of each repository
-- `--volume-size`: Size limit for each archive volume (default: 1G)
-- `--upload-to-s3`: Upload archives to S3 bucket
-- `--s3-profile`: AWS profile for S3 upload
-- `--s3-bucket`: Destination S3 bucket name
-- `--s3-path`: Destination path within the bucket (default: github_backups/<org_name>)
-- `--storage-class`: Storage class for S3 objects (default: "DEEP_ARCHIVE")
-- `--checkpoint-file`: Path to checkpoint file to save progress
-- `--no-resume`: Don't resume from previous checkpoint, even if one exists
+- `--local-path`: Base directory for repository backups (optional, default: ~/github_backup_staging)
+- `--include-forks`: Include forked repositories in the backup (optional, default: false)
+- `--include-wikis`: Download wiki pages for each repository (optional, default: false)
+- `--include-lfs`: Include Git LFS objects in the clones (optional, default: false)
+- `--create-archives`: Create archives of each repository (optional, default: false)
+- `--upload-to-s3`: Upload archives to S3 bucket (optional, default: false)
+- `--s3-bucket`: Destination S3 bucket name (required when --upload-to-s3 is used)
+- `--s3-profile`: AWS profile for S3 upload (optional, default: uses default profile)
+- `--s3-path`: Destination path within the bucket (optional, default: github_backups/<org_name>)
+- `--storage-class`: Storage class for S3 objects (optional, default: "DEEP_ARCHIVE")
+- `--cleanup`: Remove local repositories after successful backup (optional, default: false)
+- `--confirm`: Confirm each step before execution (optional, default: false)
+- `--volume-size`: Size limit for each archive volume (optional, default: "1G")
+- `--checkpoint-file`: Path to checkpoint file to save progress (optional, default: auto-generated)
+- `--no-resume`: Don't resume from previous checkpoint (optional, default: false)
 
 ## Examples
 

@@ -25,19 +25,19 @@ python backup_s3.py [folder_name] [options]
 
 ### Options
 
-- `--cleanup`: Remove local staging and archive directories after successful upload
-- `--use-delete`: Use the `--delete` flag with `aws s3 sync` during download (removes local files not in source)
-- `--confirm`: Prompt for confirmation before each operation step
-- `--volume-size`: Size limit for each archive volume (default: 1G)
-- `--source-profile`: AWS profile for source bucket (default: uses default profile)
-- `--dest-profile`: AWS profile for destination bucket (default: "prod-3")
-- `--source-bucket`: Source S3 bucket name (default: "studies-db-prod")
-- `--dest-bucket`: Destination S3 bucket name (default: "newatlantis-science")
-- `--dest-path`: Destination path within the bucket (default: same as source bucket name)
-- `--base-local-path`: Base directory on local machine for temporary downloads (default: ~/s3_backup_staging)
-- `--storage-class`: Storage class for S3 objects (default: "DEEP_ARCHIVE", options: "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING", "GLACIER", "DEEP_ARCHIVE", "GLACIER_IR", "EXPRESS_ONEZONE")
-- `--checkpoint-file`: Path to checkpoint file to save progress (by default, a file based on inputs will be used)
-- `--no-resume`: Don't resume from previous checkpoint, even if one exists
+- `--source-bucket`: Source S3 bucket name (required)
+- `--dest-bucket`: Destination S3 bucket name (required)
+- `--source-profile`: AWS profile for source bucket (optional, default: uses default profile)
+- `--dest-profile`: AWS profile for destination bucket (optional, default: uses default profile)
+- `--dest-path`: Destination path within the bucket (optional, default: same as source bucket name)
+- `--base-local-path`: Base directory on local machine for temporary downloads (optional, default: ~/s3_backup_staging)
+- `--storage-class`: Storage class for S3 objects (optional, default: "DEEP_ARCHIVE", options: "STANDARD", "REDUCED_REDUNDANCY", "STANDARD_IA", "ONEZONE_IA", "INTELLIGENT_TIERING", "GLACIER", "DEEP_ARCHIVE", "GLACIER_IR", "EXPRESS_ONEZONE")
+- `--cleanup`: Remove local staging and archive directories after successful upload (optional, default: false)
+- `--use-delete`: Use the `--delete` flag with `aws s3 sync` during download (optional, removes local files not in source)
+- `--confirm`: Prompt for confirmation before each operation step (optional)
+- `--volume-size`: Size limit for each archive volume (optional, default: 1G)
+- `--checkpoint-file`: Path to checkpoint file to save progress (optional, default: auto-generated based on inputs)
+- `--no-resume`: Don't resume from previous checkpoint, even if one exists (optional, default: false)
 
 ## Examples
 
