@@ -291,3 +291,14 @@ Example workflow:
 1. Start a backup: `python backup_s3.py my-folder` or `python backup_github.py my-org-name`
 2. If the process is interrupted, run the same command again
 3. The script will automatically detect the previous progress and resume from the last completed step
+
+
+## Recommended AWS Sync Settings
+
+```
+aws configure set default.s3.max_concurrent_requests 64
+aws configure set default.s3.max_queue_size 10000
+aws configure get default.s3.multipart_threshold
+aws configure set default.s3.multipart_threshold 100MB
+aws configure set default.s3.multipart_chunksize 100MB
+```
