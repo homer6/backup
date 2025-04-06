@@ -23,7 +23,9 @@ A Python utility for backing up all repositories from a GitHub organization, wit
 
 ## Installation
 
-No special installation required - just clone the repository and ensure you have the following:
+### Prerequisites
+
+Ensure you have the following:
 
 - Python 3.6+
 - AWS CLI v2 (required for S3 operations)
@@ -33,6 +35,40 @@ No special installation required - just clone the repository and ensure you have
   - macOS: `brew install dar`
 - Properly configured AWS credentials (for S3 operations)
 - GitHub personal access token with `repo` scope (for GitHub backup, set as environment variable `GITHUB_TOKEN`)
+
+### Setting Up a Python Environment
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-username/backup.git
+   cd backup
+   ```
+
+2. Create a virtual environment:
+   ```bash
+   # Using venv (Python's built-in module)
+   python3 -m venv venv
+   
+   # Activate the virtual environment
+   # On macOS/Linux:
+   source venv/bin/activate
+   # On Windows:
+   venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Set up the GitHub token (if using GitHub backup):
+   ```bash
+   # Create a personal access token at https://github.com/settings/tokens
+   # Make sure it has 'repo' scope permissions
+   export GITHUB_TOKEN=your_github_personal_access_token
+   ```
+
+5. You're ready to use the backup tools!
 
 ## Usage
 
