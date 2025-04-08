@@ -5,6 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 - Run S3 backup: `python backup_s3.py [folder_name]`
 - Run GitHub backup: `python backup_github.py <org_name>`
+- Run Pack: `python pack.py <folder_path>`
+- Run Unpack: `python unpack.py <destination_folder> --s3-path <s3-path>`
 - Lint: `flake8 *.py`
 - Format: `black *.py`
 - Type check: `mypy *.py`
